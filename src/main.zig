@@ -32,14 +32,14 @@ const Circle = struct { // : Shape
     radius: f32,
 
     const Self = @This();
-    const pi = 3.14;
+    const pi = std.math.pi;
 
     pub fn area(self: Self) f32 {
-        return 2 * self.radius * pi * pi;
+        return pi * self.radius * self.radius;
     }
 
     pub fn circumference(self: Self) f32 {
-        return pi * self.radius * self.radius;
+        return 2 * self.radius * pi;
     }
 
     pub fn shapeName() []const u8 {
@@ -62,9 +62,10 @@ pub fn main() !void {
     // Add them into an array and output
     var arrOfShapes = [2]Shape{ rectShape, circShape };
 
+    // just a test that the base pointers are not copies
     rect.length = 10;
 
     for (arrOfShapes) |shape| {
-        std.log.info("area of {s} is: {}", .{ shape.call("shapeName", .{}), shape.call("area", .{}) });
+        std.log.info("area of {s} is: {d:.2}", .{ shape.call("shapeName", .{}), shape.call("area", .{}) });
     }
 }
