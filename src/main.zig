@@ -2,70 +2,45 @@ const std = @import("std");
 const interface = @import("interface.zig");
 const Interface = interface.Interface;
 const SelfType = interface.SelfType;
+const Component = @import("component.zig").Component;
+const CompoData = @import("component.zig").CompoData;
+const MyComponent = @import("my_component.zig").MyComponent;
+const Mover = @import("my_component.zig").Mover;
 
-const Shape = Interface(struct {
-    area: *const fn (*SelfType) f32, // even if it's immutable it needs to be a pointer
-    circumference: *const fn (*SelfType) f32,
-    shapeName: *const fn () []const u8,
-}, interface.Storage.NonOwning);
+pub const Object = struct {
+    a: f32 = 0,
+    component: ?Component = null,
 
-const Rectangle = struct { // : Shape
-    length: f32,
-    width: f32,
-
-    const Self = @This();
-
-    pub fn area(self: Self) f32 {
-        return self.length * self.width;
-    }
-
-    pub fn circumference(self: Self) f32 {
-        return self.length * 2 + self.width * 2;
-    }
-
-    pub fn shapeName() []const u8 {
-        return "rectangle";
-    }
-};
-
-const Circle = struct { // : Shape
-    radius: f32,
-
-    const Self = @This();
-    const pi = std.math.pi;
-
-    pub fn area(self: Self) f32 {
-        return pi * self.radius * self.radius;
-    }
-
-    pub fn circumference(self: Self) f32 {
-        return 2 * self.radius * pi;
-    }
-
-    pub fn shapeName() []const u8 {
-        return "circle";
+    fn addComponent(self: *Object, compo: anytype) !void {
+        self.component = try Component.init(compo);
     }
 };
 
 pub fn main() !void {
+    var objects = std.BoundedArray(Object, 256){};
+    var obj = objects.addOneAssumeCapacity();
+    var obj2 = objects.addOneAssumeCapacity();
+    _ = obj2;
+    var obj3 = objects.addOneAssumeCapacity();
 
-    // Create shapes:
-    var rect = Rectangle{ .length = 2, .width = 3 };
-    var circ = Circle{ .radius = 2 };
+    var compo = MyComponent{};
+    try obj.addComponent(&compo);
 
-    // Grab "base" shapes
-    var rectShape = try Shape.init(&rect);
-    rectShape.deinit();
-    var circShape = try Shape.init(&circ);
-    circShape.deinit();
+    var mover = Mover{ .velo = 2 };
+    try obj3.addComponent(&mover);
 
-    // Add them into an array and output
-    var arrOfShapes = [2]Shape{ rectShape, circShape };
+    for (objects.slice()) |*o| {
+        if (o.component) |component| {
+            component.call("start", .{CompoData{ .dt = 1, .object = o }});
+        }
+    }
 
-    // just a test that the base pointers are not copies
-    rect.length = 10;
-
-    for (arrOfShapes) |shape| {
-        std.log.info("area of {s} is: {d:.2}", .{ shape.call("shapeName", .{}), shape.call("area", .{}) });
+    // update
+    for (0..10) |_| {
+        for (objects.slice()) |*o| {
+            if (o.component) |component| {
+                _ = component.call("update", .{CompoData{ .dt = 1, .object = o }});
+            }
+        }
     }
 }
